@@ -28,15 +28,16 @@ body {
 <script>
 
 class Agent {
-	constructor(pos, mesh , fsm) {
+	constructor(pos, mesh , fsm, statesign) {
 	
 		this.fsm = fsm;  // AI engine
-
+		this.statesign = statesign;
 		this.pos = pos.clone();
 		this.vel = new THREE.Vector3();
 		this.force = new THREE.Vector3();
 		this.ghost = null;
 		this.mesh = mesh;
+		scene.add(statesign);
 		scene.add (mesh);
 
 		//this.nhbd  = [];
@@ -62,7 +63,8 @@ class Agent {
 		
 		this.pos.add(this.vel.clone().multiplyScalar(dt));
 		this.mesh.position.copy(this.pos);
-
+		this.statesign.position.copy(this.pos);
+		this.statesign.position.y = 9;
 		// for orientable agent
 			
 		// non PD version
@@ -175,6 +177,22 @@ initFSM();
 init();
 animate();
 
+function statesignMesh(){
+	let loader = new THREE.TextureLoader();
+	loader.crossOrigin = '';
+	texture = loader.load('https://i.imgur.com/gZL1cQJ.jpg');
+
+	var texMat = new THREE.MeshBasicMaterial({
+		map: texture,
+		//transparent: true
+		//alphaTest: 0.5
+	});
+	
+	return new THREE.Mesh(new THREE.PlaneGeometry(15, 8), texMat);
+	//stateSign.position.y = 9;
+
+}
+
 function agentMesh () {
 	// mesh facing +x
 
@@ -232,20 +250,9 @@ function init() {
 		transparent:true
 	}));
 	scene.add(ghost);
-		let loader1 = new THREE.TextureLoader();
-	loader1.crossOrigin = '';
-	texture = loader1.load('https://i.imgur.com/S0cyvEj.png');
 
-	var texMat = new THREE.MeshBasicMaterial({
-		map: texture,
-	//transparent: true
-	//alphaTest: 0.5
-	});
 
-	stateSign = new THREE.Mesh(new THREE.PlaneGeometry(15, 8), texMat);
-	ghost.add(stateSign);
-	stateSign.position.z = 9;
-	stateSign.rotation.x = Math.PI/2
+
 	ghost.rotation.x = -Math.PI/2
 
 	raycaster = new THREE.Raycaster();
@@ -259,15 +266,13 @@ function init() {
 			color: 0xff0000
 		}));
 	*/
-	
 
-	
-	
 	
 	
 	let mesh = agentMesh();
 	let fsm = initFSM();
-	agent = new Agent(new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), mesh,fsm);
+	let statesign = statesignMesh();
+	agent = new Agent(new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), mesh,fsm,statesign);
 	
 	agents.push(agent);
 				
@@ -318,7 +323,10 @@ function animate() {
 	agents.forEach(function(agent) {
 		agent.update(0.01);
 	})
-
+	let cameraRoot = camera.position.clone();
+	cameraRoot.y = 0;
+	ghost.lookAt (cameraRoot);
+	//agent.lookAt (cameraRoot);
 	/*
 	if (state == 'run') console.log("run");
 	if (state == 'stop') console.log("stop");
