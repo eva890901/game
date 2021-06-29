@@ -180,12 +180,12 @@ animate();
 function statesignMesh(){
 	let loader = new THREE.TextureLoader();
 	loader.crossOrigin = '';
-	texture = loader.load('https://i.imgur.com/gZL1cQJ.jpg');
+	texture = loader.load('https://i.imgur.com/oKXnsrU.png');
 
 	var texMat = new THREE.MeshBasicMaterial({
 		map: texture,
-		//transparent: true
-		//alphaTest: 0.5
+		transparent: true
+		//SalphaTest: 0.5
 	});
 	
 	return new THREE.Mesh(new THREE.PlaneGeometry(15, 8), texMat);
@@ -326,7 +326,7 @@ function animate() {
 	let cameraRoot = camera.position.clone();
 	cameraRoot.y = 0;
 	ghost.lookAt (cameraRoot);
-	//agent.lookAt (cameraRoot);
+	//stateSign.lookAt (cameraRoot);
 	/*
 	if (state == 'run') console.log("run");
 	if (state == 'stop') console.log("stop");
