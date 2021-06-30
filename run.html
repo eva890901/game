@@ -319,12 +319,12 @@ function animate() {
 	findNbhd(agents);
 
   	let dt = clock.getDelta();
-
-	agents.forEach(function(agent) {
-		agent.update(0.01);
-	})
 	let cameraRoot = camera.position.clone();
 	cameraRoot.y = 0;
+	agents.forEach(function(agent) {
+		agent.update(0.01);
+		agent.lookAt (cameraRoot);
+	})
 	ghost.lookAt (cameraRoot);
 	//stateSign.lookAt (cameraRoot);
 	/*
