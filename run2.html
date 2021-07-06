@@ -155,19 +155,6 @@ class Avatar {
 			this.target = new THREE.Vector3(x,y,z);
 		}
 	}
-   
-	setFSMRun(){
-		this.fsm.run();
-		$('#state').text("Flee!!!!");
-		$('#state').css('color', 'green');
-		this.mesh.material.color.setHex( 0x18851b );
-	}
-	setFSMStop(){
-		this.fsm.stop();
-		$('#state').text("Idle....");
-		$('#state').css('color', 'red');
-		this.mesh.material.color.setHex( 0xf54242 ) ;
-	}
 
 	targetInducedForce (targetPos) { 
 		let sign = 0;
@@ -194,15 +181,29 @@ class Agent extends Avatar {
 		this.statesign = statesign;
 		scene.add (statesign);
 	}
-   
+   	setFSMRun(){
+		this.fsm.run();
+		$('#state').text("Flee!!!!");
+		$('#state').css('color', 'green');
+		this.mesh.material.color.setHex( 0x18851b );
+		
+	}
+	setFSMStop(){
+		this.fsm.stop();
+		$('#state').text("Idle....");
+		$('#state').css('color', 'red');
+		this.mesh.material.color.setHex( 0xf54242 ) ;
+	}
 	update (dt) {
-		this.statesign.position.copy(this.pos);
-		this.statesign.position.y = 9;
+
 		//console.log ('in agent update ...');
 		if (this.brain) 
 			this.brain(this);
+			
+			
 		super.update (dt);  // calling avatar update
-
+		this.statesign.position.copy(this.pos);
+		this.statesign.position.y = 9;
 	}
 }
 
@@ -248,23 +249,41 @@ function statesignMesh(){
 	
 	return new THREE.Mesh(new THREE.PlaneGeometry(15, 8), texMat);
 	//stateSign.position.y = 9;
+	/*
+	const loader = new THREE.FontLoader();
 
+	loader.load( 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function ( font ) {
+
+		const geometry = new THREE.TextGeometry( 'Hello three.js!', {
+			font: font,
+			size: 80,
+			height: 5,
+			curveSegments: 12,
+			bevelEnabled: true,
+			bevelThickness: 10,
+			bevelSize: 8,
+			bevelOffset: 0,
+			bevelSegments: 5
+		} );
+		var txtMater = new THREE.MeshBasicMaterial({color: 0x0000ff });
+		return new THREE.Mesh(geometry,txtMater);
+	} );  
+*/
 }
 
 function preyBrain(prey) {//便宜行事
-   if (prey.pos.distanceTo (preditor.pos) < 60){
-      prey.setFleeTarget (preditor.pos.x, preditor.pos.y, preditor.pos.z);
-   prey.setFSMRun();
+	let BW = 5;
+	if (prey.pos.distanceTo (preditor.pos) < 60 - BW/2 ){
+		prey.setFleeTarget (preditor.pos.x, preditor.pos.y, preditor.pos.z);
+		prey.setFSMRun();
 
-   }
-   else {
-   prey.setFSMStop();
- 
-   
-      prey.target = null;
-      // also: to make it stop then idle ...
-      prey.vel.setLength(0); 
-    }
+	}
+	else if (prey.pos.distanceTo (preditor.pos) > 60+ BW/2){
+		prey.setFSMStop();
+		prey.target = null;
+	// also: to make it stop then idle ...
+		prey.vel.setLength(0); 
+	}
 }
 
 function init() {
@@ -313,9 +332,9 @@ function init() {
   
   ////////////////////////
   let fsm = initFSM();
-	debugger;
+	//debugger;
   preditor = new Agent (new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), 
-           agentMesh (2,'red'), 'ghost',statesignMesh());
+           agentMesh (2,'red'), 'ghost',null,fsm,statesignMesh());
   prey = new Agent (new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), 
            agentMesh (1,'cyan'), 'people', preyBrain ,fsm,statesignMesh());
      
@@ -347,10 +366,13 @@ function animate() {
    requestAnimationFrame(animate);
    render();
    
-   let dt = clock.getDelta();
-
-   preditor.update(dt);    
-   prey.update(dt);
+	let dt = clock.getDelta();
+	let cameraRoot = camera.position.clone();
+	cameraRoot.y = 0;
+	preditor.update(dt);  
+	//preditor.statesign.lookAt (cameraRoot);	
+	prey.update(dt);
+	//prey.statesign.lookAt (cameraRoot);
 }
 
 function render() {
