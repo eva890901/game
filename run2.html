@@ -62,20 +62,19 @@ function initFSM () {
 }
 
 class Avatar {
-	constructor(pos, mesh,statesign) {
+	constructor(pos, mesh) {
 		this.pos = pos.clone();
 		this.vel = new THREE.Vector3();
 		this.force = new THREE.Vector3();
 		this.MAXSPEED = 50;
 		this.ARRIVAL_R = 30;
-		this.statesign = statesign;
 		this.target = null;
 		this.steermode = '';
 
 		this.size = 3;    
 		this.mesh = mesh;
 		scene.add (mesh);
-		scene.add (statesign);
+
 		// for orientable agent
 		this.angle = 0;
 	}
@@ -130,8 +129,7 @@ class Avatar {
 		this.vel.setLength(Math.clamp (speed, 0, this.MAXSPEED))
 		this.pos.add(this.vel.clone().multiplyScalar(dt))
 		this.mesh.position.copy(this.pos)
-		this.statesign.position.copy(this.pos);
-		this.statesign.position.y = 9;
+
 	// for orientable agent
 		if (this.vel.length() > 0.1) {
 			this.angle = Math.atan2 (-this.vel.z, this.vel.x)
@@ -190,13 +188,16 @@ class Avatar {
 
 class Agent extends Avatar {
 	constructor (pos, mesh, name = '', brain = null, fsm,statesign) {
-		super (pos, mesh,statesign);
+		super (pos, mesh);
 		this.brain = brain;  // a function
 		this.fsm = fsm;
-
+		this.statesign = statesign;
+		scene.add (statesign);
 	}
    
 	update (dt) {
+		this.statesign.position.copy(this.pos);
+		this.statesign.position.y = 9;
 		//console.log ('in agent update ...');
 		if (this.brain) 
 			this.brain(this);
@@ -250,7 +251,7 @@ function statesignMesh(){
 
 }
 
-function preyBrain(prey) {
+function preyBrain(prey) {//便宜行事
    if (prey.pos.distanceTo (preditor.pos) < 60){
       prey.setFleeTarget (preditor.pos.x, preditor.pos.y, preditor.pos.z);
    prey.setFSMRun();
@@ -312,9 +313,9 @@ function init() {
   
   ////////////////////////
   let fsm = initFSM();
-
+	debugger;
   preditor = new Agent (new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), 
-           agentMesh (2,'red'), 'ghost');
+           agentMesh (2,'red'), 'ghost',statesignMesh());
   prey = new Agent (new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), 
            agentMesh (1,'cyan'), 'people', preyBrain ,fsm,statesignMesh());
      
