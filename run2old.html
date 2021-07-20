@@ -25,7 +25,7 @@ body {
 <p id='preyState'></p>
 </div>
 
-<script src="state-machine.js"></script>
+<script src="dist/state-machine.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
 
@@ -45,50 +45,50 @@ import { Gyroscope } from "https://threejs.org/examples/jsm/misc/Gyroscope.js";
 
 class Avatar {
 
-	constructor(pos, mesh) {
-		this.pos = pos.clone();
-		this.vel = new THREE.Vector3();
-		this.force = new THREE.Vector3();
-		this.MAXSPEED = 50;
-		this.ARRIVAL_R = 30;
+	  constructor(pos, mesh) {
+			this.pos = pos.clone();
+			this.vel = new THREE.Vector3();
+			this.force = new THREE.Vector3();
+			this.MAXSPEED = 50;
+			this.ARRIVAL_R = 30;
 			
-		this.size = 3;    
-		this.angle = 0; // for orientable agent
-		this.mesh = mesh;
-		scene.add (mesh);
+			this.size = 3;    
+			this.angle = 0; // for orientable agent
+			this.mesh = mesh;
+			scene.add (mesh);
 
-		this.target = null;
-		this.steermode = '';
-		this.BRAKING = 0; // no brake
+			this.target = null;
+			this.steermode = '';
+			this.BRAKING = 0; // no brake
 		   
-	}
+	  }
   
-	update(dt) {
+	  update(dt) {
 		
-		this.accumulateForce();
-		this.vel.add(this.force.clone().multiplyScalar(dt));
+			this.accumulateForce();
+			this.vel.add(this.force.clone().multiplyScalar(dt));
 
-		// ARRIVAL: velocity modulation
-		if (this.target !== null) {   
-			let diff = this.target.clone().sub(this.pos)
-			let dst = diff.length();
-			if (dst < this.ARRIVAL_R) {
+			// ARRIVAL: velocity modulation
+			if (this.target !== null) {   
+			  let diff = this.target.clone().sub(this.pos)
+			  let dst = diff.length();
+			  if (dst < this.ARRIVAL_R) {
 				this.vel.setLength(dst)
+			  }
 			}
-		}
 			
-		// MAXSPEED modulation
-		let speed = this.vel.length()
-		this.vel.setLength(Math.clamp (speed, 0, this.MAXSPEED));
-		this.pos.add(this.vel.clone().multiplyScalar(dt));
-		this.mesh.position.copy(this.pos);
+			// MAXSPEED modulation
+			let speed = this.vel.length()
+			this.vel.setLength(Math.clamp (speed, 0, this.MAXSPEED));
+			this.pos.add(this.vel.clone().multiplyScalar(dt));
+			this.mesh.position.copy(this.pos);
 			
-		// for orientable agent
-		if (this.vel.length() > 1.0) {   // tuning
-			this.angle = Math.atan2 (-this.vel.z, this.vel.x)
-			this.mesh.rotation.y = this.angle
-		}
-	}
+			// for orientable agent
+			if (this.vel.length() > 1.0) {   // tuning
+				this.angle = Math.atan2 (-this.vel.z, this.vel.x)
+				this.mesh.rotation.y = this.angle
+			}
+	  }
   
 	setFleeTarget (x,y,z) {
 		this.BRAKING = 0; // release Brake while flee
@@ -106,9 +106,11 @@ class Avatar {
   
 	targetInducedForce (targetPos) { 
 		let sign = 0;
+
 		if (this.steerMode === 'FLEE')
 			sign = -1;
-		return targetPos.clone().sub(this.pos).normalize().multiplyScalar(sign*this.MAXSPEED).sub(this.vel);
+	
+	 return targetPos.clone().sub(this.pos).normalize().multiplyScalar(sign*this.MAXSPEED).sub(this.vel);
 	}
 
 	setBrake (brake) {  // make the avatar stop gracefully
@@ -124,27 +126,27 @@ class Avatar {
     	
 		// braking ...
 		this.force.add (this.vel.clone().multiplyScalar(-this.BRAKING));
+   	
 	}
 
 }
 
 class Agent extends Avatar {
 
-	constructor (pos, mesh, name = '', fsm) {
-		super (pos, mesh);
-		this.fsm = fsm;
-		this.stateSign = null;
-		this.name = name;
-	}
+   constructor (pos, mesh, name = '', fsm) {
+      super (pos, mesh);
+	  this.fsm = fsm;
+	  // initial state got from fsm.state;
+	  this.stateSign = null;
+	  this.name = name;
+   }
    
    update (dt) {
-		
+   
 		//	debugger;
 		if( this.name == 'human') super.update (dt);  // calling avatar update
 		else if( this.name == 'ghost' ){
-		
 			keyboard.update();
-			
 			if ( keyboard.pressed("left") ) 
 				angle += 0.03;               
 			if ( keyboard.pressed("right") )
@@ -180,6 +182,8 @@ class Agent extends Avatar {
 			this.stateSign.position.y = 10;
 			this.stateSign.lookAt (camera.position.x, 10, camera.position.z);
 			
+			console.log(camera.position.x.toFixed(2) + ',  0, ' + camera.position.z.toFixed(2));
+			
 			if (this.fsm.state === 'idle') {
 				this.stateSign.children[0].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
@@ -196,15 +200,15 @@ class Agent extends Avatar {
 ////////////////////////////////////////////////////////////
 function initFSM () {
 
-	let fsm = new StateMachine({
-		init: 'idle',
-		transitions: [
-			{ name: 'approach', from: 'idle',  to: 'flee' },
-			{ name: 'depart',   from: 'flee', to: 'idle'},
-		]
-	});
+ let fsm = new StateMachine({
+    init: 'idle',
+    transitions: [
+      { name: 'approach',     from: 'idle',  to: 'flee' },
+      { name: 'depart',     from: 'flee', to: 'idle'},
+    ]
+  });
   
-	return fsm; 
+  return fsm; 
 }
 
 ////////////////////
@@ -212,7 +216,7 @@ var camera, scene, renderer, clock;
 
 var mouse = new THREE.Vector2();
 var PROPORTION = 0.003;
-var preditor, prey ,preys = [];
+var preditor, prey;
 var gyro;
 var keyboard = new KeyboardState();
 
@@ -239,19 +243,17 @@ function agentMesh (scale=1, _color='cyan') {
 }
 
 function stateSign () {
-
 	let loader = new THREE.TextureLoader();
 	let idleMap = loader.load ("https://i.imgur.com/wMH2lff.png");
 	let fleeMap = loader.load ("https://i.imgur.com/T3xmLmy.png");
 	
 	let idleMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
-		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
+		{map: idleMap, transparent: true, alphaTest: 0, side:THREE.DoubleSide}));
 	let fleeMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
-		{map: fleeMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
+		{map: fleeMap, transparent: true, alphaTest: 0, side:THREE.DoubleSide}));
 	let preyStateSign = new THREE.Group();
 	preyStateSign.add (idleMesh,fleeMesh);
 	return preyStateSign;
-	
 }
 
 function init() {
@@ -264,10 +266,9 @@ function init() {
 	camera.position.y = 100;
 	gyro = new Gyroscope();
 	gyro.add(camera);
-	
 	var gridXZ = new THREE.GridHelper(240, 24, 'red', 'white');
 	scene.add(gridXZ);
-
+	scene.add(new THREE.AxesHelper(50));
 	renderer = new THREE.WebGLRenderer();
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.setClearColor(0x888888);
@@ -290,26 +291,24 @@ function init() {
 
 	preditor = new Agent (randomPosZX(-100,100), agentMesh (2,'red'), 'ghost');
 	console.log (preditor.pos);
-	preditor.mesh.add(gyro);
 
-	for (let i = 0; i < 3; i++) {
-		prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
-		prey.stateSign = stateSign();
-		scene.add (prey.stateSign);
-		preys.push(prey);
-	}
+	prey = new Agent (randomPosZX(-100,100), agentMesh (1,'cyan'), 'human', initFSM());
+	prey.stateSign = stateSign();
+	scene.add (prey.stateSign)
+	preditor.mesh.add(gyro);
 	
 	//////////////////////
 	speed = 5.0;
 	angle = 0.0;
-	
+
+  
 }
 
 function randomPosZX(min,max) {
 	let x = min + (max-min)*Math.random();
 	let z = min + (max-min)*Math.random();
 	return new THREE.Vector3(60,0,40);
-	//return new THREE.Vector3(x,0,z);
+	//return new THREE.Vector3();//x,0,z);
 }
 
 
@@ -322,40 +321,35 @@ function animate() {
 	requestAnimationFrame(animate);
 	render();
   
-	preditor.update(dt);
-	
-	preys.forEach(function(prey) { 
-		prey.update(dt);
+	preditor.update(dt);    
+	prey.update(dt);
 
-		let distanceNow = preditor.pos.distanceTo (prey.pos);
-	  
-		let BW = 10;
-		// event firing
-		if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2)
-			prey.fsm.depart();
+	let distanceNow = preditor.pos.distanceTo (prey.pos);
+  
+	let BW = 10;
+	// event firing
+	if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2)
+		prey.fsm.depart();
 
-		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2)
-			prey.fsm.approach();
-		
-		//console.log (prey.fsm.state);
-	  
-		animate.distance = distanceNow;
-		scaleStateSign(prey);
-	})
+	if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2)
+		prey.fsm.approach();
+  	
+	//console.log (prey.fsm.state);
+  
+	animate.distance = distanceNow;
+	scaleStateSign(prey);
   
 }
 function scaleStateSign(prey) {
 	let distance = prey.pos.distanceTo (camera.position);  
 
 	let size = 2*Math.tan(camera.fov*Math.PI/180 * camera.aspect/2)*PROPORTION*distance;
-	
-	preys.forEach(function(prey) { 
-		prey.stateSign.scale.set (size, size, size);
-	})
+
+	prey.stateSign.scale.set (size, size, size);
 }
 
 function render() {
-	renderer.render(scene, camera);
+  renderer.render(scene, camera);
 }
 
 </script>
