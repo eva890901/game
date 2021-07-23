@@ -185,14 +185,17 @@ class Agent extends Avatar {
 			if (this.fsm.state === 'idle') {
 				this.stateSign.children[0].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
+				this.stateSign.children[2].material.visible = false;
 			}
 			if (this.fsm.state === 'flee') {
 				this.stateSign.children[1].material.visible = true;
 				this.stateSign.children[0].material.visible = false;
+				this.stateSign.children[2].material.visible = false;
 			}
 			if (this.fsm.state === 'stop') {
 				this.stateSign.children[2].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
+				this.stateSign.children[0].material.visible = false;
 			}
 		}
    }
