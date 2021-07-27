@@ -60,6 +60,7 @@ class Avatar {
 		this.target = null;
 		this.steermode = '';
 		this.BRAKING = 0; // no brake
+		
 		   
 	}
   
@@ -89,6 +90,12 @@ class Avatar {
 			this.mesh.rotation.y = this.angle
 		}
 	}
+	
+	setSeekTarget (x,y,z) {
+		this.BRAKING = 0; // release Brake while seek
+		this.steerMode = 'SEEK';
+		this._setTarget (x,y,z);	
+	}
   
 	setFleeTarget (x,y,z) {
 		this.BRAKING = 0; // release Brake while flee
@@ -106,7 +113,9 @@ class Avatar {
   
 	targetInducedForce (targetPos) { 
 		let sign = 0;
-		if (this.steerMode === 'FLEE')
+		if (this.steerMode === 'SEEK')
+			sign = 1;
+		else if (this.steerMode === 'FLEE')
 			sign = -1;
 		return targetPos.clone().sub(this.pos).normalize().multiplyScalar(sign*this.MAXSPEED).sub(this.vel);
 	}
@@ -135,11 +144,12 @@ class Agent extends Avatar {
 		this.fsm = fsm;
 		this.stateSign = null;
 		this.name = name;
+		this.nbhd  = [];
+
 	}
    
    update (dt) {
-		
-		//	debugger;
+
 		if( this.name == 'human') super.update (dt);  // calling avatar update
 		else if( this.name == 'ghost' ){
 		
@@ -168,13 +178,23 @@ class Agent extends Avatar {
 		// how to make the brain not so hyper-active
 		if (this.fsm) {
 			$('#preyState').text (this.fsm.state);
-					
 			if (this.fsm.state === 'flee')
 				super.setFleeTarget (preditor.pos.x, preditor.pos.y, preditor.pos.z)
-			if (this.fsm.state === 'idle')
-				super.setBrake (10);
+				
+			if (this.fsm.state === 'idle'){
+				let save = 0;
+				for (let i = 0; i < this.nbhd.length; i++) {
+					if(this.nbhd[i].fsm.state === 'stop'){
+						super.setSeekTarget( this.nbhd[i].pos.x , this.nbhd[i].pos.y , this.nbhd[i].pos.z);
+						save = 1;
+						break;
+					}
+				}
+				if(save === 0) super.setBrake (10);
+				
+			}
 			if (this.fsm.state === 'stop')
-				super.setBrake (10);	
+				super.setBrake (10);
 			
 		}
 		if (this.stateSign) {
@@ -199,6 +219,15 @@ class Agent extends Avatar {
 			}
 		}
    }
+   
+   distanceTo(otherAgent) {
+		return this.pos.distanceTo(otherAgent.pos);
+	}
+	
+	addNbr(otherAgent) {
+		
+		this.nbhd.push(otherAgent);
+	}
 }
 
 
@@ -211,6 +240,8 @@ function initFSM () {
 			{ name: 'approach', from: 'idle', to: 'flee' },
 			{ name: 'depart',   from: 'flee', to: 'idle'},
 			{ name: 'halt',     from: 'flee', to: 'stop'},
+			
+			{ name: 'save',     from: 'stop', to: 'idle'},
 		]
 	});
   
@@ -222,7 +253,7 @@ var camera, scene, renderer, clock;
 
 var mouse = new THREE.Vector2();
 var PROPORTION = 0.003;
-var preditor, prey ,preys = [];
+var preditor ,preys = [];
 var gyro;
 var keyboard = new KeyboardState();
 
@@ -231,10 +262,29 @@ var speed, angle;
 init();
 animate();
 
+function findNbhd(preys) {
+	//console.log(agents);
+	let i, j, dst;
+	let nPreys = preys.length;
+  
+	preys.forEach(function(prey){prey.nbhd=[]});
+  
+	for (i = 0; i < nPreys - 1; i++) {
+		for (j = i + 1; j < nPreys; j++) {
+			dst = preys[i].distanceTo(preys[j]);
+			//console.log(dst);
+			//if (dst < 20) { // NBHD = 20
+				preys[i].addNbr(preys[j]);
+				preys[j].addNbr(preys[i]);
+			//}
+		}
+	}
+}
+
 function agentMesh (scale=1, _color='cyan') {
 	// mesh facing +x
   
-	let points = [];
+	/*let points = [];
   
 	points.push (new THREE.Vector3(10*scale,0,0), new THREE.Vector3(0,0,-3*scale), 
 		new THREE.Vector3(0,0,3*scale), new THREE.Vector3(0,3*scale,0));
@@ -245,15 +295,29 @@ function agentMesh (scale=1, _color='cyan') {
 	geometry.setIndex (indices);
 	geometry.computeFaceNormals();
 	return new THREE.Mesh (geometry, 
-       new THREE.MeshBasicMaterial({color:_color, wireframe:true}))  
+       new THREE.MeshBasicMaterial({color:_color, wireframe:true}))
+*/
+
+	var loader = new THREE.TextureLoader();
+	loader.setCrossOrigin ('');
+	let capTex = loader.load ('https://i.imgur.com/3vOA8Vi.png');
+	let woodTex = loader.load ('https://i.imgur.com/DrvlmNW.jpg?1');
+	var captain = new THREE.Group();
+	let capTop = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial({map: capTex}));
+	capTop.rotation.x = -Math.PI/2;
+	capTop.rotation.z = -Math.PI/2;  // 初始：head toward +X (world)
+	capTop.position.y = 2.5;
+	let captainRing = new THREE.Mesh (new THREE.CylinderGeometry(10,10,5,20, 2, true), new THREE.MeshBasicMaterial({map: woodTex, side:THREE.DoubleSide}));
+	captain.add (captainRing, capTop);
+	return captain;
 }
 
 function stateSign () {
 
 	let loader = new THREE.TextureLoader();
 	let idleMap = loader.load ("https://i.imgur.com/wMH2lff.png");
-	let fleeMap = loader.load ("https://i.imgur.com/T3xmLmy.png");
-	let haltMap = loader.load ("https://i.imgur.com/dZE3xnz.png");
+	let fleeMap = loader.load ("https://i.imgur.com/qSFZiCy.png");
+	let haltMap = loader.load ("https://i.imgur.com/y3qX9H2.png");
 	let idleMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
 	let fleeMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
@@ -301,11 +365,10 @@ function init() {
 	////////////////////////
 
 	preditor = new Agent (randomPosZX(-100,100), agentMesh (2,'red'), 'ghost');
-	//console.log (preditor.pos);
-	//preditor.mesh.add(gyro);
 
+	
 	for (let i = 0; i < 3; i++) {
-		prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
+		let prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
 		prey.stateSign = stateSign();
 		scene.add (prey.stateSign);
 		preys.push(prey);
@@ -333,6 +396,8 @@ function animate() {
   
 	requestAnimationFrame(animate);
 	render();
+	
+	findNbhd(preys);
   
 	preditor.update(dt*2);
 	
@@ -343,7 +408,7 @@ function animate() {
 	  
 		let BW = 10;
 		// event firing
-		if (prey.fsm.state === "flee" && distanceNow < animate.distance && distanceNow < 30-BW/2)
+		if (prey.fsm.state === "flee" && distanceNow < animate.distance && distanceNow < 25)
 			prey.fsm.halt();
 			
 		if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2)
@@ -352,9 +417,20 @@ function animate() {
 		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2)
 			prey.fsm.approach();
 		
+		let beSaved = 0;
 		
-		//console.log (prey.fsm.state);
-	  
+		for (let i = 0; i < prey.nbhd.length; i++) {
+			//console.log(prey.distanceTo(prey.nbhd[i]));
+			if(prey.distanceTo(prey.nbhd[i])<10){
+				beSaved = 1;
+				break;
+			}
+		}
+		
+		if (prey.fsm.state === "stop" && beSaved === 1){
+			prey.fsm.save();
+		}
+			  
 		animate.distance = distanceNow;
 		scaleStateSign(prey);
 	})
