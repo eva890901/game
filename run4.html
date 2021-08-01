@@ -199,27 +199,29 @@ class Agent extends Avatar {
 		}
 		if (this.stateSign) {
 			this.stateSign.position.copy (this.pos);
-			this.stateSign.position.y = 10;
+			this.stateSign.position.y = 15;
 			this.stateSign.lookAt (camera.position.x, 10, camera.position.z);
 			
 			if (this.fsm.state === 'idle') {
 				this.stateSign.children[0].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
+				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
 			}
 			if (this.fsm.state === 'flee') {
 				this.stateSign.children[1].material.visible = true;
 				this.stateSign.children[0].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
+				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
 			}
 			if (this.fsm.state === 'stop') {
 				this.stateSign.children[2].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[0].material.visible = false;
-			}
-			if(this.fsm.state === 'save'){
-			
-			
+				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
 			}
 		}
    }
@@ -255,12 +257,15 @@ function initFSM () {
 ////////////////////
 var camera, scene, renderer, clock;
 
+var blink = false;
+var tickerOn = false;
+const TICKER_PERIOD =  1000;
+
 var mouse = new THREE.Vector2();
 var PROPORTION = 0.003;
 var preditor ,preys = [];
 var gyro;
 var keyboard = new KeyboardState();
-
 var speed, angle;
 
 init();
@@ -286,21 +291,22 @@ function findNbhd(preys) {
 }
 
 function agentMesh (scale=1, _color='cyan') {
-	// mesh facing +x
-  
-	/*let points = [];
-  
-	points.push (new THREE.Vector3(10*scale,0,0), new THREE.Vector3(0,0,-3*scale), 
-		new THREE.Vector3(0,0,3*scale), new THREE.Vector3(0,3*scale,0));
-	let geometry = new THREE.BufferGeometry().setFromPoints (points);
 
-	let indices = [];
-	indices.push (0,3,2, 0,2,1, 1,3,0, 1,2,3);
-	geometry.setIndex (indices);
-	geometry.computeFaceNormals();
-	return new THREE.Mesh (geometry, 
-       new THREE.MeshBasicMaterial({color:_color, wireframe:true}))
-*/
+	var loader = new THREE.TextureLoader();
+	loader.setCrossOrigin ('');
+	let capTex = loader.load ('https://i.imgur.com/3vOA8Vi.png');
+	let woodTex = loader.load ('https://i.imgur.com/DrvlmNW.jpg?1');
+	var captain = new THREE.Group();
+	let capTop = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial({map: woodTex}));
+	capTop.rotation.x = -Math.PI/2;
+	capTop.rotation.z = -Math.PI/2;  // 初始：head toward +X (world)
+	capTop.position.y = 2.5;
+	let captainRing = new THREE.Mesh (new THREE.CylinderGeometry(10,10,5,20, 2, true), new THREE.MeshBasicMaterial({map: woodTex, side:THREE.DoubleSide}));
+	captain.add (captainRing, capTop);
+	return captain;
+}
+
+function agentMesh1 (scale=1, _color='cyan') {
 
 	var loader = new THREE.TextureLoader();
 	loader.setCrossOrigin ('');
@@ -319,10 +325,13 @@ function agentMesh (scale=1, _color='cyan') {
 function stateSign () {
 
 	let loader = new THREE.TextureLoader();
-	let idleMap = loader.load ("https://i.imgur.com/wMH2lff.png");
-	let fleeMap = loader.load ("https://i.imgur.com/qSFZiCy.png");
+	let idleMap = loader.load ("https://i.imgur.com/tkimyIe.png");
+	let fleeMap = loader.load ("https://i.imgur.com/bk4haY3.png");
+	
 	let haltMap = loader.load ("https://i.imgur.com/HBorej7.png");
 	let saveMap = loader.load ("https://i.imgur.com/0OXewyl.png");
+	let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
+	
 	let idleMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
 	let fleeMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
@@ -331,8 +340,10 @@ function stateSign () {
 		{map: haltMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 	let saveMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		{map: saveMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
+	let fleeMesh1 = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+		{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 	let preyStateSign = new THREE.Group();
-	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh);
+	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh,fleeMesh1);
 	return preyStateSign;
 	
 }
@@ -371,7 +382,7 @@ function init() {
 
 	////////////////////////
 
-	preditor = new Agent (randomPosZX(-100,100), agentMesh (2,'red'), 'ghost');
+	preditor = new Agent (randomPosZX(-100,100), agentMesh1 (2,'red'), 'ghost');
 
 	
 	for (let i = 0; i < 3; i++) {
@@ -415,14 +426,23 @@ function animate() {
 	  
 		let BW = 10;
 		// event firing
-		if (prey.fsm.state === "flee" && distanceNow < animate.distance && distanceNow < 25)
+		if (prey.fsm.state === "flee" && distanceNow < animate.distance && distanceNow < 25){
 			prey.fsm.halt();
+		}
+			
 			
 		if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2)
 			prey.fsm.depart();
 
-		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2)
-			prey.fsm.approach();
+		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2){
+			
+			prey.fsm.approach();  	
+			blink = true;
+			// if ticker is stopped, start another ticker
+			if (tickerOn === false) setTimeout (ticker,0);
+		
+		}
+		blink = false;	
 		
 		let beSaved = 0;
 		
@@ -442,6 +462,34 @@ function animate() {
 		scaleStateSign(prey);
 	})
   
+}
+function ticker() {
+  	preys.forEach(function(prey) { 
+		if (prey.stateSign.children[4].material.visible===true){
+			
+			prey.stateSign.children[1].material.visible = true;
+			prey.stateSign.children[4].material.visible = false;
+			
+		}
+			
+		else{
+			prey.stateSign.children[4].material.visible = true;
+			prey.stateSign.children[1].material.visible = false;
+
+		}
+	  
+		prey.stateSign.children[4].material.visible = !prey.stateSign.children[4].material.visible;
+
+		// console.log ('in ticker: blink is ' + blink)
+		if (blink) {
+			setTimeout (ticker, distanceNow/100*TICKER_PERIOD);
+			tickerOn = true;
+		} 
+		else {
+			tickerOn = false
+		}
+	})
+  // once blink is false, no more timeout calls in schedule
 }
 function scaleStateSign(prey) {
 	let distance = prey.pos.distanceTo (camera.position);  

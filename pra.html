@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden
+}
+</style>
+</head>
+
+<body> 
+<input type=range min=0 max=100 value=80 id='distance'> distance <br>
+<p id='disShow'>
+</p>
+<div id='square' style='width:40vw;height:40vw; background:yellow'></div>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js">
+</script>
+
+<script type='module'>
+var blink = false;
+var tickerOn = false;
+const THRESHOLD = 50;
+const TICKER_PERIOD =  1000;
+var dis;
+
+setInterval (poll, 200);
+function poll () {
+	dis = $('#distance').val();  
+  $('#disShow').text ('dis: ' + dis);
+  
+  if (dis < THRESHOLD) { // start blinking
+  	blink = true;
+    // if ticker is stopped, start another ticker
+    if (tickerOn === false) setTimeout (ticker,0);
+  } 
+  else
+  	blink = false;  // stop blinking
+
+  //console.log ('blink: ' + blink + ': ' + THRESHOLD);
+}
+
+function ticker() {
+  
+	//ticker.red = ticker.red !== undefined ? ticker.red : true;
+  if (ticker.red)
+		$('#square').css ('background', 'red');
+  else
+    $('#square').css ('background', 'yellow');
+  
+  ticker.red = ! ticker.red;
+  
+  // console.log ('in ticker: blink is ' + blink)
+  if (blink) {
+  	setTimeout (ticker, dis/100*TICKER_PERIOD);
+    tickerOn = true;
+  } else {
+  	tickerOn = false
+  }
+  // once blink is false, no more timeout calls in schedule
+}
+
+
+</script>
+</body>
+
+</html>
