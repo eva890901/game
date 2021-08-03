@@ -131,6 +131,12 @@ class Avatar {
 		else
 			this.force.set (0,0,0);  // for null-target initial force
     	
+		let push = new THREE.Vector3();
+		for (let i = 0; i < this.nbhd.length; i++) {
+			let point = this.pos.clone().sub(this.nbhd[i].pos);
+			push.add(point.setLength(120 / point.length()));
+		}
+		this.force.add(push);
 		// braking ...
 		this.force.add (this.vel.clone().multiplyScalar(-this.BRAKING));
 	}
@@ -183,8 +189,11 @@ class Agent extends Avatar {
 				
 			if (this.fsm.state === 'idle'){
 				let save = 0;
+				
 				for (let i = 0; i < this.nbhd.length; i++) {
-					if(this.nbhd[i].fsm.state === 'stop'){
+					let dst = this.distanceTo(this.nbhd[i]);
+					//console.log(dst);
+					if(this.nbhd[i].fsm.state === 'stop' && dst < 150){
 						super.setSeekTarget( this.nbhd[i].pos.x , this.nbhd[i].pos.y , this.nbhd[i].pos.z);
 						save = 1;
 						break;
@@ -195,8 +204,11 @@ class Agent extends Avatar {
 			}
 			if (this.fsm.state === 'stop')
 				super.setBrake (10);
+				
+
 			
 		}
+
 		if (this.stateSign) {
 			this.stateSign.position.copy (this.pos);
 			this.stateSign.position.y = 15;
@@ -207,22 +219,31 @@ class Agent extends Avatar {
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
-				this.stateSign.children[4].material.visible = false;
+
 			}
 			if (this.fsm.state === 'flee') {
 				this.stateSign.children[1].material.visible = true;
 				this.stateSign.children[0].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
-				this.stateSign.children[4].material.visible = false;
+
 			}
 			if (this.fsm.state === 'stop') {
 				this.stateSign.children[2].material.visible = true;
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[0].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
-				this.stateSign.children[4].material.visible = false;
+				for (let i = 0; i < this.nbhd.length; i++) {
+					if (this.nbhd[i].fsm.state !== 'stop'){
+						this.nbhd[i].stateSign.children[3].material.visible = true;
+						this.nbhd[i].stateSign.children[0].material.visible = false;
+						this.nbhd[i].stateSign.children[1].material.visible = false;
+						this.nbhd[i].stateSign.children[2].material.visible = false;
+						console.log(i);
+					}
+				}
 			}
+
 		}
    }
    
@@ -246,7 +267,6 @@ function initFSM () {
 			{ name: 'approach', from: 'idle', to: 'flee' },
 			{ name: 'depart',   from: 'flee', to: 'idle'},
 			{ name: 'halt',     from: 'flee', to: 'stop'},
-			
 			{ name: 'save',     from: 'stop', to: 'idle'},
 		]
 	});
@@ -326,11 +346,11 @@ function stateSign () {
 
 	let loader = new THREE.TextureLoader();
 	let idleMap = loader.load ("https://i.imgur.com/tkimyIe.png");
-	let fleeMap = loader.load ("https://i.imgur.com/bk4haY3.png");
+	let fleeMap = loader.load ("https://i.imgur.com/qSFZiCy.png");
 	
 	let haltMap = loader.load ("https://i.imgur.com/HBorej7.png");
 	let saveMap = loader.load ("https://i.imgur.com/0OXewyl.png");
-	let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
+	//let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
 	
 	let idleMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
@@ -340,10 +360,10 @@ function stateSign () {
 		{map: haltMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 	let saveMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		{map: saveMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
-	let fleeMesh1 = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
-		{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
+	//let fleeMesh1 = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+		//{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 	let preyStateSign = new THREE.Group();
-	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh,fleeMesh1);
+	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh);
 	return preyStateSign;
 	
 }
@@ -436,18 +456,24 @@ function animate() {
 
 		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2){
 			
-			prey.fsm.approach();  	
-			blink = true;
-			// if ticker is stopped, start another ticker
-			if (tickerOn === false) setTimeout (ticker,0);
+			prey.fsm.approach(); 
 		
 		}
-		blink = false;	
-		
+		/*
+		if (prey.fsm.state === "stop"){
+			for (let i = 0; i < prey.nbhd.length; i++) {
+				if (prey.nbhd[i].fsm.state !== "stop"){
+					prey.nbhd[i].stateSign.children[3].material.visible = true;
+					prey.nbhd[i].stateSign.children[0].material.visible = false;
+					prey.nbhd[i].stateSign.children[1].material.visible = false;
+					prey.nbhd[i].stateSign.children[2].material.visible = false;
+				
+				}
+			}
+		}*/
 		let beSaved = 0;
 		
 		for (let i = 0; i < prey.nbhd.length; i++) {
-			//console.log(prey.distanceTo(prey.nbhd[i]));
 			if(prey.distanceTo(prey.nbhd[i])<10){
 				beSaved = 1;
 				break;
@@ -463,34 +489,7 @@ function animate() {
 	})
   
 }
-function ticker() {
-  	preys.forEach(function(prey) { 
-		if (prey.stateSign.children[4].material.visible===true){
-			
-			prey.stateSign.children[1].material.visible = true;
-			prey.stateSign.children[4].material.visible = false;
-			
-		}
-			
-		else{
-			prey.stateSign.children[4].material.visible = true;
-			prey.stateSign.children[1].material.visible = false;
 
-		}
-	  
-		prey.stateSign.children[4].material.visible = !prey.stateSign.children[4].material.visible;
-
-		// console.log ('in ticker: blink is ' + blink)
-		if (blink) {
-			setTimeout (ticker, distanceNow/100*TICKER_PERIOD);
-			tickerOn = true;
-		} 
-		else {
-			tickerOn = false
-		}
-	})
-  // once blink is false, no more timeout calls in schedule
-}
 function scaleStateSign(prey) {
 	let distance = prey.pos.distanceTo (camera.position);  
 
