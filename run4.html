@@ -211,8 +211,9 @@ class Agent extends Avatar {
 
 		if (this.stateSign) {
 			this.stateSign.position.copy (this.pos);
-			this.stateSign.position.y = 15;
-			this.stateSign.lookAt (camera.position.x, 10, camera.position.z);
+			this.stateSign.position.y = 2.7;
+			this.stateSign.rotation.x = -Math.PI/2;
+			//this.stateSign.lookAt (camera.position.x, 10, camera.position.z);
 			
 			if (this.fsm.state === 'idle') {
 				this.stateSign.children[0].material.visible = true;
@@ -345,23 +346,24 @@ function agentMesh1 (scale=1, _color='cyan') {
 function stateSign () {
 
 	let loader = new THREE.TextureLoader();
-	let idleMap = loader.load ("https://i.imgur.com/tkimyIe.png");
+	let idleMap = loader.load ("https://i.imgur.com/UdzMdIy.png");
 	let fleeMap = loader.load ("https://i.imgur.com/qSFZiCy.png");
 	
-	let haltMap = loader.load ("https://i.imgur.com/HBorej7.png");
+	let haltMap = loader.load ("https://i.imgur.com/NjzM8Xy.png");
 	let saveMap = loader.load ("https://i.imgur.com/0OXewyl.png");
 	//let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
 	
-	let idleMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+	let idleMesh = new THREE.Mesh (new THREE.CircleGeometry(18,20), new THREE.MeshBasicMaterial(
 		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
-	let fleeMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+	let fleeMesh = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial(
 		{map: fleeMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
-	let haltMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+	let haltMesh = new THREE.Mesh (new THREE.CircleGeometry(18,20), new THREE.MeshBasicMaterial(
 		{map: haltMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
-	let saveMesh = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
+	let saveMesh = new THREE.Mesh (new THREE.CircleGeometry(15,20), new THREE.MeshBasicMaterial(
 		{map: saveMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
 	//let fleeMesh1 = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
 		//{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
+		
 	let preyStateSign = new THREE.Group();
 	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh);
 	return preyStateSign;
@@ -405,7 +407,7 @@ function init() {
 	preditor = new Agent (randomPosZX(-100,100), agentMesh1 (2,'red'), 'ghost');
 
 	
-	for (let i = 0; i < 3; i++) {
+	for (let i = 0; i < 2; i++) {
 		let prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
 		prey.stateSign = stateSign();
 		scene.add (prey.stateSign);
@@ -485,7 +487,7 @@ function animate() {
 		}
 			  
 		animate.distance = distanceNow;
-		scaleStateSign(prey);
+		//scaleStateSign(prey);
 	})
   
 }
