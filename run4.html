@@ -352,7 +352,7 @@ function stateSign () {
 	let fleeMap = loader.load ("https://i.imgur.com/ZT2QxgO.png");
 	
 	let haltMap = loader.load ("https://i.imgur.com/NjzM8Xy.png");
-	let saveMap = loader.load ("https://i.imgur.com/0OXewyl.png");
+	let saveMap = loader.load ("https://i.imgur.com/WiwyyEb.png");
 	let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
 	
 	let idleMesh = new THREE.Mesh (new THREE.CircleGeometry(11,20), new THREE.MeshBasicMaterial(
@@ -409,7 +409,7 @@ function init() {
 	preditor = new Agent (randomPosZX(-100,100), agentMesh1 (2,'red'), 'ghost');
 
 	
-	for (let i = 0; i < 3; i++) {
+	for (let i = 0; i < 2; i++) {
 		let prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
 		prey.stateSign = stateSign();
 		scene.add (prey.stateSign);
