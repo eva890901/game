@@ -70,13 +70,13 @@ class Avatar {
 		this.vel.add(this.force.clone().multiplyScalar(dt));
 
 		// ARRIVAL: velocity modulation
-		if (this.target !== null) {   
-			let diff = this.target.clone().sub(this.pos)
-			let dst = diff.length();
-			if (dst < this.ARRIVAL_R) {
-				this.vel.setLength(dst)
-			}
-		}
+		if (this.target !== null) {
+            let diff = this.target.clone().sub(this.pos)
+            let dst = diff.length()-15;     // dst < radius *2 
+            if (dst < this.ARRIVAL_R) {
+                this.vel.setLength(dst);
+            }
+        }
 			
 		// MAXSPEED modulation
 		let speed = this.vel.length()
@@ -159,16 +159,7 @@ class Agent extends Avatar {
 		if( this.name == 'human') super.update (dt);  // calling avatar update
 		else if( this.name == 'ghost' ){
 		
-			keyboard.update();
-			
-			if ( keyboard.pressed("left") ) 
-				angle += 0.03;               
-			if ( keyboard.pressed("right") )
-				angle -= 0.03;               
-			if ( keyboard.pressed("up") )  
-				speed += 0.5;        
-			if ( keyboard.pressed("down") )  
-				speed -= 0.5;    
+
 
 			speed = Math.clamp (speed, 0.1, 20.0);		
 			this.vel = new THREE.Vector3(speed,0,0);
@@ -211,7 +202,7 @@ class Agent extends Avatar {
 
 		if (this.stateSign) {
 			this.stateSign.position.copy (this.pos);
-			this.stateSign.position.y = 2.7;
+			this.stateSign.position.y = 5;
 			this.stateSign.rotation.x = -Math.PI/2;
 			//this.stateSign.lookAt (camera.position.x, 10, camera.position.z);
 			
@@ -220,13 +211,19 @@ class Agent extends Avatar {
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
+				blink = false;
 
 			}
+			
 			if (this.fsm.state === 'flee') {
 				this.stateSign.children[1].material.visible = true;
 				this.stateSign.children[0].material.visible = false;
 				this.stateSign.children[2].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
+				blink = true;
+				setTimeout (ticker, 0);
 
 			}
 			if (this.fsm.state === 'stop') {
@@ -234,13 +231,16 @@ class Agent extends Avatar {
 				this.stateSign.children[1].material.visible = false;
 				this.stateSign.children[0].material.visible = false;
 				this.stateSign.children[3].material.visible = false;
+				this.stateSign.children[4].material.visible = false;
+				blink = false;
 				for (let i = 0; i < this.nbhd.length; i++) {
 					if (this.nbhd[i].fsm.state !== 'stop'){
 						this.nbhd[i].stateSign.children[3].material.visible = true;
 						this.nbhd[i].stateSign.children[0].material.visible = false;
 						this.nbhd[i].stateSign.children[1].material.visible = false;
 						this.nbhd[i].stateSign.children[2].material.visible = false;
-						console.log(i);
+						this.stateSign.children[4].material.visible = false;
+						blink = false;
 					}
 				}
 			}
@@ -277,7 +277,7 @@ function initFSM () {
 
 ////////////////////
 var camera, scene, renderer, clock;
-
+var timer=0;
 var blink = false;
 var tickerOn = false;
 const TICKER_PERIOD =  1000;
@@ -288,7 +288,7 @@ var preditor ,preys = [];
 var gyro;
 var keyboard = new KeyboardState();
 var speed, angle;
-
+var whichOne=0;
 init();
 animate();
 
@@ -318,12 +318,14 @@ function agentMesh (scale=1, _color='cyan') {
 	let capTex = loader.load ('https://i.imgur.com/3vOA8Vi.png');
 	let woodTex = loader.load ('https://i.imgur.com/DrvlmNW.jpg?1');
 	var captain = new THREE.Group();
-	let capTop = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial({map: woodTex}));
-	capTop.rotation.x = -Math.PI/2;
-	capTop.rotation.z = -Math.PI/2;  // 初始：head toward +X (world)
-	capTop.position.y = 2.5;
+	//let capTop = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial({map: woodTex}));
+	//capTop.rotation.x = -Math.PI/2;
+	//capTop.rotation.z = -Math.PI/2;  // 初始：head toward +X (world)
+	//capTop.position.y = 5;
 	let captainRing = new THREE.Mesh (new THREE.CylinderGeometry(10,10,5,20, 2, true), new THREE.MeshBasicMaterial({map: woodTex, side:THREE.DoubleSide}));
-	captain.add (captainRing, capTop);
+	captainRing.position.y = 2.5;
+	captain.add (captainRing);
+	
 	return captain;
 }
 
@@ -346,14 +348,14 @@ function agentMesh1 (scale=1, _color='cyan') {
 function stateSign () {
 
 	let loader = new THREE.TextureLoader();
-	let idleMap = loader.load ("https://i.imgur.com/UdzMdIy.png");
-	let fleeMap = loader.load ("https://i.imgur.com/qSFZiCy.png");
+	let idleMap = loader.load ("https://i.imgur.com/sFGbSfY.png");
+	let fleeMap = loader.load ("https://i.imgur.com/ZT2QxgO.png");
 	
 	let haltMap = loader.load ("https://i.imgur.com/NjzM8Xy.png");
 	let saveMap = loader.load ("https://i.imgur.com/0OXewyl.png");
-	//let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
+	let fleeMap1 = loader.load ("https://i.imgur.com/OaVwuZy.jpg");
 	
-	let idleMesh = new THREE.Mesh (new THREE.CircleGeometry(18,20), new THREE.MeshBasicMaterial(
+	let idleMesh = new THREE.Mesh (new THREE.CircleGeometry(11,20), new THREE.MeshBasicMaterial(
 		{map: idleMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
 	let fleeMesh = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial(
 		{map: fleeMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
@@ -361,11 +363,11 @@ function stateSign () {
 		{map: haltMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 	let saveMesh = new THREE.Mesh (new THREE.CircleGeometry(15,20), new THREE.MeshBasicMaterial(
 		{map: saveMap, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));
-	//let fleeMesh1 = new THREE.Mesh (new THREE.PlaneGeometry(16,10), new THREE.MeshBasicMaterial(
-		//{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
+	let fleeMesh1 = new THREE.Mesh (new THREE.CircleGeometry(10,20), new THREE.MeshBasicMaterial(
+		{map: fleeMap1, transparent: true, alphaTest: 1, side:THREE.DoubleSide}));	
 		
 	let preyStateSign = new THREE.Group();
-	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh);
+	preyStateSign.add (idleMesh,fleeMesh,haltMesh,saveMesh,fleeMesh1);
 	return preyStateSign;
 	
 }
@@ -407,7 +409,7 @@ function init() {
 	preditor = new Agent (randomPosZX(-100,100), agentMesh1 (2,'red'), 'ghost');
 
 	
-	for (let i = 0; i < 2; i++) {
+	for (let i = 0; i < 3; i++) {
 		let prey = new Agent (randomPosZX(-100,100),agentMesh (1,'cyan'), 'human', initFSM());
 		prey.stateSign = stateSign();
 		scene.add (prey.stateSign);
@@ -429,7 +431,19 @@ function randomPosZX(min,max) {
 
 
 function animate() {
-
+			keyboard.update();
+			
+			if ( keyboard.pressed("left") ) {
+				angle += 0.03;
+				
+			}
+				               
+			if ( keyboard.pressed("right") )
+				angle -= 0.03;               
+			if ( keyboard.pressed("up") )  
+				speed += 0.5;        
+			if ( keyboard.pressed("down") )  
+				speed -= 0.5;    
 	var dt = clock.getDelta();
 	
 	animate.distance = (animate.distance) ? animate.distance : 0;
@@ -453,34 +467,25 @@ function animate() {
 		}
 			
 			
-		if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2)
+		if (prey.fsm.state === "flee" && distanceNow > animate.distance && distanceNow > 40+BW/2){
 			prey.fsm.depart();
+		}
+			
 
 		if (prey.fsm.state === "idle" && distanceNow < animate.distance && distanceNow < 40-BW/2){
 			
 			prey.fsm.approach(); 
 		
 		}
-		/*
-		if (prey.fsm.state === "stop"){
-			for (let i = 0; i < prey.nbhd.length; i++) {
-				if (prey.nbhd[i].fsm.state !== "stop"){
-					prey.nbhd[i].stateSign.children[3].material.visible = true;
-					prey.nbhd[i].stateSign.children[0].material.visible = false;
-					prey.nbhd[i].stateSign.children[1].material.visible = false;
-					prey.nbhd[i].stateSign.children[2].material.visible = false;
-				
-				}
-			}
-		}*/
+
 		let beSaved = 0;
 		
 		for (let i = 0; i < prey.nbhd.length; i++) {
-			if(prey.distanceTo(prey.nbhd[i])<10){
-				beSaved = 1;
-				break;
-			}
-		}
+            if(prey.distanceTo(prey.nbhd[i])<20){
+                beSaved = 1;
+                break;
+            }
+        }
 		
 		if (prey.fsm.state === "stop" && beSaved === 1){
 			prey.fsm.save();
@@ -491,7 +496,41 @@ function animate() {
 	})
   
 }
+function chooseOne (whichOne) {
+var dt = clock.getDelta();
+preditor.update(dt*2);
+	preys.forEach(function(prey) { 
+		prey.update(dt);
+	for (let i = 0; i < prey.stateSign.children.length; i++)
+		prey.stateSign.children[i].material.visible = false;
 
+		prey.stateSign.children[whichOne].material.visible = true; 
+})
+	
+}
+
+function ticker() {
+  
+	ticker.red = ticker.red !== undefined ? ticker.red : true;
+	if (ticker.red) {
+		chooseOne (1);
+	} else {
+		chooseOne (4);
+	}
+  
+  ticker.red = ! ticker.red;
+  
+  // console.log ('in ticker: blink is ' + blink)
+	if (blink) {
+		timer=setTimeout (ticker, TICKER_PERIOD);
+		tickerOn = true;
+	} 
+	else {
+		tickerOn = false;
+		chooseOne(whichOne);
+	}
+  // once blink is false, no more timeout calls in schedule
+}
 function scaleStateSign(prey) {
 	let distance = prey.pos.distanceTo (camera.position);  
 
